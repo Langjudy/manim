@@ -845,8 +845,10 @@ class Scene(object):
             self.undo()
         elif char == "z" and (modifiers & (Mods.CTRL_OR_CMD | Mods.SHIFT)):
             self.redo()
-        # command + q
+        # command + q, or escape on its own, as the tip in interact promises
         elif char == manim_config.key_bindings.quit and (modifiers & Mods.CTRL_OR_CMD):
+            self.quit_interaction = True
+        elif symbol == Keys.ESCAPE:
             self.quit_interaction = True
         # Space or right arrow
         elif char == " " or symbol == Keys.RIGHT:

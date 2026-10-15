@@ -1,0 +1,4 @@
+# API keys, conversations, uploads and generated scripts/videos stay local
+data/
+workspace/
+__pycache__/

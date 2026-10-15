@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="studio-token" content="__STUDIO_TOKEN__">
+<title>ManimGL AI Studio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<aside id="sidebar">
+  <div class="brand">
+    <span class="logo">∑</span>
+    <div>
+      <div class="brand-title">ManimGL AI Studio</div>
+      <div class="brand-sub">用大模型生成数学动画脚本</div>
+    </div>
+  </div>
+  <button id="new-chat" class="btn primary block">＋ 新对话</button>
+  <div class="list-label">对话</div>
+  <ul id="conv-list"></ul>
+  <div class="sidebar-foot">
+    <div id="skill-status" class="muted small"></div>
+    <button id="open-settings" class="btn block">⚙ 模型与 API Key 设置</button>
+  </div>
+</aside>
+
+<main id="main">
+  <header id="topbar">
+    <div class="title-block">
+      <div id="conv-title" title="点击重命名">新对话</div>
+      <div id="conv-stats" title="本对话所有请求的 token 用量与缓存命中情况"></div>
+    </div>
+    <div class="top-controls">
+      <label class="field">
+        <span>模型提供商</span>
+        <select id="provider"></select>
+      </label>
+      <label class="field">
+        <span>模型</span>
+        <input id="model" list="model-options" spellcheck="false">
+        <datalist id="model-options"></datalist>
+      </label>
+      <label class="field" id="effort-wrap" title="思考越深，代码通常越可靠，但越慢、输出 token 越多">
+        <span>思考</span>
+        <select id="effort">
+          <option value="off">关闭（最快）</option>
+          <option value="low">低</option>
+          <option value="medium">中</option>
+          <option value="high">高</option>
+          <option value="max">最高</option>
+        </select>
+      </label>
+      <label class="switch" title="每次回复后自动快速运行一遍代码，出错就把报错和真实 API 签名发回给模型修复（最多 2 轮）">
+        <input type="checkbox" id="auto-fix" checked>
+        <span class="slider"></span>
+        <span class="switch-label">自动修复</span>
+      </label>
+      <label class="switch" title="把 manimgl-best-practices 技能的规则作为参考资料发给模型">
+        <input type="checkbox" id="use-skill" checked>
+        <span class="slider"></span>
+        <span class="switch-label">Skill</span>
+      </label>
+      <button id="close-chat" class="btn ghost" title="关闭当前对话（不删除）">关闭</button>
+      <button id="delete-chat" class="btn ghost danger" title="删除当前对话">删除</button>
+    </div>
+  </header>
+
+  <section id="messages">
+    <div id="welcome">
+      <h1>想做一个什么样的数学动画？</h1>
+      <p class="muted">描述你的想法，或附上公式截图、手绘草图。生成的代码可以直接在页面里修改并运行。</p>
+      <div class="examples">
+        <button class="example">用面积拼接演示勾股定理的证明</button>
+        <button class="example">在单位圆上展示 sin 和 cos 曲线是怎么生成的</button>
+        <button class="example">展示 2×2 矩阵对平面网格的线性变换，并标出特征向量</button>
+        <button class="example">用越来越细的黎曼和逼近定积分 ∫₀² x² dx</button>
+      </div>
+    </div>
+  </section>
+
+  <footer id="composer">
+    <div id="attachments"></div>
+    <div class="composer-box">
+      <button id="attach" class="icon-btn" title="添加图片（也可以直接粘贴或拖进来）">🖼</button>
+      <input type="file" id="file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+      <textarea id="input" rows="1" placeholder="描述你想要的动画…（Enter 发送，Shift+Enter 换行，可粘贴图片）"></textarea>
+      <button id="send" class="btn primary">发送</button>
+    </div>
+    <div id="composer-hint" class="muted small"></div>
+  </footer>
+</main>
+
+<dialog id="settings">
+  <form method="dialog" id="settings-form">
+    <h2>模型与 API Key 设置</h2>
+    <p class="muted small">API Key 只保存在本机 <code>ai_studio/data/config.json</code>，不会上传到任何地方（除了对应模型的官方接口）。留空表示不修改已保存的 Key。</p>
+    <label class="field row">
+      <span>默认提供商</span>
+      <select id="default-provider"></select>
+    </label>
+    <div id="provider-cards"></div>
+    <button type="button" id="add-provider" class="btn">＋ 添加 OpenAI 兼容的提供商</button>
+    <div id="skill-info" class="muted small"></div>
+    <div class="dialog-actions">
+      <span id="settings-error" class="error-text"></span>
+      <button type="button" id="settings-cancel" class="btn">取消</button>
+      <button type="submit" id="settings-save" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
